@@ -1,0 +1,80 @@
+<?php
+include 'dbconnect.php'; // เชื่อมต่อฐานข้อมูล
+
+// ค้นหาสินค้าตามคำสำคัญ (คีย์เวิร์ด)
+$keyword = '';
+if (isset($_GET['search'])) {
+    $keyword = $_GET['search'];
+    $query = $conn->prepare("SELECT * FROM products WHERE name LIKE ?");
+    $keyword = "%$keyword%";
+    $query->bind_param("s", $keyword);
+} else if (isset($_GET['category_id'])) {
+    // ค้นหาสินค้าตามหมวดหมู่
+    $category_id = $_GET['category_id'];
+    $query = $conn->prepare("SELECT * FROM products WHERE cat_id = ?");
+    $query->bind_param("i", $category_id);
+} else {
+    // แสดงสินค้าทั้งหมด
+    $query = $conn->prepare("SELECT * FROM products");
+}
+
+$query->execute();
+$result = $query->get_result();
+
+// ดึงหมวดหมู่ทั้งหมด
+$category_query = $conn->prepare("SELECT * FROM categories");
+$category_query->execute();
+$categories = $category_query->get_result();
+?>
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>รายการสินค้า</title>
+    <style>
+        .product {
+            width: 150px;
+            height: 200px;
+            margin: 10px;
+            display: inline-block;
+            text-align: center;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h2>รายการสินค้า</h2>
+
+    <!-- ฟอร์มค้นหาสินค้า -->
+    <form method="GET">
+        <input type="text" name="search" placeholder="ค้นหาสินค้า...">
+        <button type="submit">ค้นหา</button>
+    </form>
+
+    <!-- แสดงหมวดหมู่สินค้า -->
+    <h3>หมวดหมู่สินค้า</h3>
+    <ul>
+        <?php while ($category = $categories->fetch_assoc()) { ?>
+            <li>
+                <a href="products.php?category_id=<?php echo $category['id']; ?>">
+                    <?php echo $category['name']; ?>
+                </a>
+            </li>
+        <?php } ?>
+    </ul>
+
+    <!-- แสดงรายการสินค้า -->
+    <div>
+        <?php while ($row = $result->fetch_assoc()) { ?>
+            <div class="product">
+                <img src="<?php echo $row['image']; ?>" alt="<?php echo $row['name']; ?>" width="150" height="200"><br>
+                <strong><?php echo $row['name']; ?></strong><br>
+                ราคา: <?php echo $row['price']; ?> บาท<br>
+                <a href="product_detail.php?id=<?php echo $row['id']; ?>">ดูรายละเอียด</a>
+            </div>
+        <?php } ?>
+    </div>
+</body>
+</html>
